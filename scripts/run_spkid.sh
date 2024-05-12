@@ -75,6 +75,7 @@ fi
 # \TODO
 # Create your own features with the name compute_$FEAT(), where $FEAT is the name of the feature.
 # - Select (or change) different features, options, etc. Make you best choice and try several options.
+# \DONE Implemented the additional compute_lpcc() and compute_mfcc() functions
 
 compute_lp() {
     db=$1
@@ -86,10 +87,41 @@ compute_lp() {
     done
 }
 
+compute_lpcc() {
+    db=$1
+    shift
+    for filename in $(sort $*); do
+        mkdir -p `dirname $w/$FEAT/$filename.$FEAT`
+        EXEC="wav2lpcc 8 10 $db/$filename.wav $w/$FEAT/$filename.$FEAT"
+        echo $EXEC && $EXEC || exit 1
+    done
+}
+
+compute_mfcc() {
+    db=$1
+    shift
+    for filename in $(sort $*); do
+        mkdir -p `dirname $w/$FEAT/$filename.$FEAT`
+        EXEC="wav2mfcc 10 25 $db/$filename.wav $w/$FEAT/$filename.$FEAT"
+        echo $EXEC && $EXEC || exit 1
+    done
+}
 #  Set the name of the feature (not needed for feature extraction itself)
-if [[ ! -v FEAT && $# > 0 && "$(type -t compute_$1)" = function ]]; then
+# if [[ ! -v FEAT && $# > 0 && "$(type -t compute_$1)" = function ]]; then
+#     FEAT=$1
+# elif [[ ! -v FEAT ]]; then
+#     echo "Variable FEAT not set. Please rerun with FEAT set to the desired feature."
+#     echo
+#     echo "For instance:"
+#     echo "    FEAT=mfcc $0 $*"
+
+#     exit 1
+# fi
+
+#  Set the name of the feature (not needed for feature extraction itself)
+if [[ ! -n "$FEAT" && $# > 0 && "$(type -t compute_$1)" = function ]]; then
     FEAT=$1
-elif [[ ! -v FEAT ]]; then
+elif [[ ! -n "$FEAT" ]]; then
     echo "Variable FEAT not set. Please rerun with FEAT set to the desired feature."
     echo
     echo "For instance:"
@@ -195,7 +227,10 @@ for cmd in $*; do
    # of a feature and a compute_$FEAT function exists.
    elif [[ "$(type -t compute_$cmd)" = function ]]; then
        FEAT=$cmd
-       compute_$FEAT $db_devel $lists/class/all.train $lists/class/all.test
+       #compute_$FEAT $db_devel $lists/class/all.train $lists/class/all.test
+
+       #solo las señales de un locutor
+       compute_$FEAT $db_devel $lists/class/SES000.train # 15 wavs in total (so 15 output .lp files)
 
    else
        echo "undefined command $cmd" && exit 1

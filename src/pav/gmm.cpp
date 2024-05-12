@@ -16,23 +16,25 @@ using namespace upc;
 
 namespace upc
 {
-	void GMM::resize(size_t _nmix, size_t dim) {
+	void GMM::resize(size_t _nmix, size_t dim)
+	{
 
 		unsigned int n = (nmix < _nmix ? nmix : _nmix);
 
-		vector_size=dim; nmix=_nmix;
+		vector_size = dim;
+		nmix = _nmix;
 
 		fvector w2 = w;
 		w.resize(nmix);
-		for (unsigned int i=0; i<n; ++i)
+		for (unsigned int i = 0; i < n; ++i)
 			w[i] = w2[i];
 
 		mu.resize(nmix, vector_size);
 		inv_sigma.resize(nmix, vector_size);
 	}
 
-								 /* log(1 / sqrt(2 * PI)) */
-	#define CTTE_GAUSSIAN -0.9189385332046727
+	/* log(1 / sqrt(2 * PI)) */
+#define CTTE_GAUSSIAN -0.9189385332046727
 
 	/*
 	 Use this function to compute log(x+y) from logx and logy:
@@ -48,19 +50,22 @@ namespace upc
 	 (same idea if logy is larger)
 	*/
 
-	float add_logs(float logx, float logy) {
+	float add_logs(float logx, float logy)
+	{
 		if (logx > logy)
-			return logx + log(1.0 + exp(logy-logx));
+			return logx + log(1.0 + exp(logy - logx));
 		else
-			return logy + log(1.0 + exp(logx-logy));
+			return logy + log(1.0 + exp(logx - logy));
 	}
 
-	float gaussian_logprob(unsigned int vector_size, const float *mu, const float *inv_sigma, const float *x) {
-		float e=0.0F, c=0.0F, logp;
+	float gaussian_logprob(unsigned int vector_size, const float *mu, const float *inv_sigma, const float *x)
+	{
+		float e = 0.0F, c = 0.0F, logp;
 		unsigned int j;
-		for (j=0; j<vector_size; ++j) {
-			float f = (x[j]-mu[j]) * inv_sigma[j];
-			e += (f*f);
+		for (j = 0; j < vector_size; ++j)
+		{
+			float f = (x[j] - mu[j]) * inv_sigma[j];
+			e += (f * f);
 			c += log(inv_sigma[j]);
 		}
 		e /= 2;
@@ -68,32 +73,36 @@ namespace upc
 		return logp;
 	}
 
-	void GMM::delete_mixture(unsigned int k) {
+	void GMM::delete_mixture(unsigned int k)
+	{
 		if (k >= nmix)
 			return;
 
-		unsigned int last = nmix-1;
+		unsigned int last = nmix - 1;
 
-		if (k != last) {
-			//save last mixture in position k
+		if (k != last)
+		{
+			// save last mixture in position k
 			w[k] = w[last];
 			unsigned int i;
-			for (i=0; i<vector_size; ++i) {
+			for (i = 0; i < vector_size; ++i)
+			{
 				mu[k][i] = mu[last][i];
 				inv_sigma[k][i] = inv_sigma[last][i];
 			}
 		}
-		resize(nmix-1, vector_size);
+		resize(nmix - 1, vector_size);
 	}
 
 	/// Computes the logprob of a single frame of the input data.
 	float GMM::gmm_logprob(const float *x) const
 	{
-		float log_prob_x,f;
+		float log_prob_x, f;
 		unsigned int k;
 		log_prob_x = log(w[0]) + gaussian_logprob(vector_size, mu[0], inv_sigma[0], x);
 
-		for (k=1; k<nmix; ++k) {
+		for (k = 1; k < nmix; ++k)
+		{
 			f = log(w[k]) + gaussian_logprob(vector_size, mu[k], inv_sigma[k], x);
 			log_prob_x = add_logs(log_prob_x, f);
 		}
@@ -110,13 +119,17 @@ namespace upc
 		float lprob = 0.0;
 		unsigned int n;
 
-		for (n=0; n<data.nrow(); ++n) {
+		for (n = 0; n < data.nrow(); ++n)
+		{
 			/// \TODO Compute the logprob of a single frame of the input data; you can use gmm_logprob() above.
+			/// \DONE Compute logprob of each row of input fmatrx
+			lprob += gmm_logprob(data[n]);
 		}
-		return lprob/data.nrow();
+		return lprob / data.nrow();
 	}
 
-	int GMM::centroid(const upc::fmatrix &data) {
+	int GMM::centroid(const upc::fmatrix &data)
+	{
 		if (data.nrow() == 0 or data.ncol() == 0)
 			return -1;
 
@@ -125,49 +138,55 @@ namespace upc
 		unsigned int n;
 		fmatrix weights(data.nrow(), 1);
 
-		for (n=0; n < weights.nrow(); ++n)
+		for (n = 0; n < weights.nrow(); ++n)
 			weights[n][0] = 1.0F;
 		em_maximization(data, weights);
 		return 0;
 	}
 
-	///Compute the best mixtures (weights, means, variances) given
-	/// -the input data
-	/// -the weights that the input data is generated for each gaussian
+	/// Compute the best mixtures (weights, means, variances) given
+	///  -the input data
+	///  -the weights that the input data is generated for each gaussian
 
-	int GMM::em_maximization(const upc::fmatrix &data, const upc::fmatrix &weights) {
+	int GMM::em_maximization(const upc::fmatrix &data, const upc::fmatrix &weights)
+	{
 		unsigned int n, j, k;
 
 		w.reset();
 		mu.reset();
 		inv_sigma.reset();
 
-		for (n=0; n<data.nrow(); ++n) {
-			for (k=0; k < nmix; ++k) {
-				w[k] +=  weights[n][k];
-				for (j=0; j < vector_size; ++j) {
-								 /* sum{x w_i} */
+		for (n = 0; n < data.nrow(); ++n)
+		{
+			for (k = 0; k < nmix; ++k)
+			{
+				w[k] += weights[n][k];
+				for (j = 0; j < vector_size; ++j)
+				{
+					/* sum{x w_i} */
 					mu[k][j] += weights[n][k] * data[n][j];
-								 /* sum{x^2 w_i} */
+					/* sum{x^2 w_i} */
 					inv_sigma[k][j] += weights[n][k] * data[n][j] * data[n][j];
 				}
 			}
 		}
-		for (k=0; k < nmix; ++k) {
-			for (j=0; j < vector_size; ++j) {
-				mu[k][j] /= w[k];/* sum{x w_i}/sum{w_i} */
-								 /* sum{x^2 w_i}/sum{w_i} */
+		for (k = 0; k < nmix; ++k)
+		{
+			for (j = 0; j < vector_size; ++j)
+			{
+				mu[k][j] /= w[k]; /* sum{x w_i}/sum{w_i} */
+								  /* sum{x^2 w_i}/sum{w_i} */
 				inv_sigma[k][j] /= w[k];
-								 /* 1/sigma */
-				inv_sigma[k][j] = 1.0F/sqrt(inv_sigma[k][j] - mu[k][j]*mu[k][j]);
+				/* 1/sigma */
+				inv_sigma[k][j] = 1.0F / sqrt(inv_sigma[k][j] - mu[k][j] * mu[k][j]);
 			}
-			w[k] /=  data.nrow();
+			w[k] /= data.nrow();
 		}
 		return 0;
 	}
 
-	///For each input data compute the probability that the data is generated from each mixture
-	///We work with log of probabilities to avoid numerical problems on intermediate results
+	/// For each input data compute the probability that the data is generated from each mixture
+	/// We work with log of probabilities to avoid numerical problems on intermediate results
 
 	float GMM::em_expectation(const fmatrix &data, fmatrix &weights) const
 	{
@@ -181,18 +200,20 @@ namespace upc
 			weights.ncol() != nmix)
 			weights.resize(data.nrow(), nmix);
 
-		//use log(prob) for intermediate computation, to avoid underflow
+		// use log(prob) for intermediate computation, to avoid underflow
 
-		//For each input data ...
-		for (n=0, log_prob_total = 0.0F; n<data.nrow(); ++n) {
-			//For each mixture ...
-			for (k=0, log_prob_x = -1e20F; k < nmix; ++k) {
-				weights[n][k] = log(w[k]) +  gaussian_logprob(vector_size, mu[k], inv_sigma[k], data[n]);
+		// For each input data ...
+		for (n = 0, log_prob_total = 0.0F; n < data.nrow(); ++n)
+		{
+			// For each mixture ...
+			for (k = 0, log_prob_x = -1e20F; k < nmix; ++k)
+			{
+				weights[n][k] = log(w[k]) + gaussian_logprob(vector_size, mu[k], inv_sigma[k], data[n]);
 				log_prob_x = add_logs(log_prob_x, weights[n][k]);
 			}
 
-			for (k=0; k < nmix; ++k)
-				weights[n][k] = exp(weights[n][k]-log_prob_x);
+			for (k = 0; k < nmix; ++k)
+				weights[n][k] = exp(weights[n][k] - log_prob_x);
 			log_prob_total += log_prob_x;
 		}
 
@@ -200,45 +221,62 @@ namespace upc
 		return log_prob_total;
 	}
 
-	int GMM::em(const fmatrix &data, unsigned int max_it, float inc_threshold, int verbose) {
+	int GMM::em(const fmatrix &data, unsigned int max_it, float inc_threshold, int verbose)
+	{
 		unsigned int iteration;
-		float old_prob=-1e34, new_prob=-1e34, inc_prob=-1e34;
+		float old_prob = -1e34, new_prob = -1e34, inc_prob = -1e34;
 
 		fmatrix weights(data.nrow(), nmix);
-		for (iteration=0; iteration<max_it; ++iteration) {
+		for (iteration = 0; iteration < max_it; ++iteration)
+		{
 			/// \TODO
+			/// \DONE
 			// Complete the loop in order to perform EM, and implement the stopping criterion.
 			//
 			// EM loop: em_expectation + em_maximization.
 			//
 			// Update old_prob, new_prob and inc_prob in order to stop the loop if logprob does not
 			// increase more than inc_threshold.
+
+			new_prob = em_expectation(data, weights);
+			em_maximization(data, weights);
+			inc_prob = new_prob - old_prob;
+			old_prob = new_prob;
+			if (inc_prob < inc_threshold)
+			{
+				break;
+			}
+
 			if (verbose & 01)
 				cout << "GMM nmix=" << nmix << "\tite=" << iteration << "\tlog(prob)=" << new_prob << "\tinc=" << inc_prob << endl;
 		}
 		return 0;
 	}
 
-	int GMM::em_split(const fmatrix &data, unsigned int final_nmix, unsigned int max_it, float inc_threshold, int verbose) {
+	int GMM::em_split(const fmatrix &data, unsigned int final_nmix, unsigned int max_it, float inc_threshold, int verbose)
+	{
 		centroid(data);
-		while (nmix <final_nmix) {
+		while (nmix < final_nmix)
+		{
 			split(final_nmix);
 			em(data, max_it, inc_threshold, verbose);
 		}
 		return 0;
 	}
 
-	void GMM::split_mixture(unsigned int src, unsigned int dest) {
+	void GMM::split_mixture(unsigned int src, unsigned int dest)
+	{
 		unsigned int j;
 		int sign;
 		float r;
-		for (j=0; j<vector_size; ++j) {
-								 /* r: (-1,1) */
-			r = (float) 2.0F *rand()/(float) RAND_MAX - 1.0F;
+		for (j = 0; j < vector_size; ++j)
+		{
+			/* r: (-1,1) */
+			r = (float)2.0F * rand() / (float)RAND_MAX - 1.0F;
 			sign = (r > 0 ? 1 : -1);
 
-			mu[dest][j] = mu[src][j] + sign * 0.5/inv_sigma[src][j];
-			mu[src][j] = mu[src][j] - sign * 0.5/inv_sigma[src][j];
+			mu[dest][j] = mu[src][j] + sign * 0.5 / inv_sigma[src][j];
+			mu[src][j] = mu[src][j] - sign * 0.5 / inv_sigma[src][j];
 
 			inv_sigma[src][j] *= sqrt(2);
 			inv_sigma[dest][j] = inv_sigma[src][j];
@@ -247,30 +285,34 @@ namespace upc
 		w[dest] = w[src];
 	}
 
-	int GMM::split(unsigned int target_size) {
+	int GMM::split(unsigned int target_size)
+	{
 		unsigned int i, j, old_size;
 
 		if (nmix >= target_size)
 			return nmix;
 
-		if (2*nmix <= target_size) {
-			target_size = 2*nmix;
+		if (2 * nmix <= target_size)
+		{
+			target_size = 2 * nmix;
 			old_size = nmix;
 			resize(target_size, vector_size);
-			for (i=old_size, j=0; i<nmix; ++i, ++j)
+			for (i = old_size, j = 0; i < nmix; ++i, ++j)
 				split_mixture(j, i);
 		}
-		else {
+		else
+		{
 			old_size = nmix;
 			resize(target_size, vector_size);
 			/* best way: select mixtures with larger variance (now, the first ones) */
-			for (i=old_size, j=0; i<nmix; ++i, ++j)
+			for (i = old_size, j = 0; i < nmix; ++i, ++j)
 				split_mixture(j, i);
 		}
 		return nmix;
 	}
 
-	int GMM::random_init(const upc::fmatrix &data, unsigned int nmix) {
+	int GMM::random_init(const upc::fmatrix &data, unsigned int nmix)
+	{
 		if (data.nrow() == 0 or data.ncol() == 0)
 			return -1;
 		resize(nmix, data.ncol());
@@ -278,21 +320,24 @@ namespace upc
 		unsigned int n, k;
 		fmatrix weights(data.nrow(), nmix);
 		weights.reset();
-		for (n=0; n < data.nrow(); ++n) {
-								 /* r: [0,1] */
-			float r = (float) rand()/(float) RAND_MAX;
-			k = (int) (nmix * r);
-			if (k == nmix) k = nmix-1;
+		for (n = 0; n < data.nrow(); ++n)
+		{
+			/* r: [0,1] */
+			float r = (float)rand() / (float)RAND_MAX;
+			k = (int)(nmix * r);
+			if (k == nmix)
+				k = nmix - 1;
 			weights[n][k] = 1.0F;
 		}
 		em_maximization(data, weights);
 		return 0;
 	}
 
-	#define HEADER_SIZE 15
+#define HEADER_SIZE 15
 	static char header[HEADER_SIZE] = "UPC: GMM V 2.0";
 
-	std::istream& GMM::read(std::istream &is) {
+	std::istream &GMM::read(std::istream &is)
+	{
 		char s[HEADER_SIZE];
 		is.read(s, HEADER_SIZE);
 		if (string(s) != string(header))
@@ -303,30 +348,31 @@ namespace upc
 		vector_size = mu.ncol();
 		return is;
 	}
-	std::ostream& GMM::write(std::ostream &os) const
+	std::ostream &GMM::write(std::ostream &os) const
 	{
 		os.write(header, HEADER_SIZE);
 		os << w << mu << inv_sigma;
 		return os;
 	}
 
-	std::ostream& GMM::print(std::ostream &os) const
+	std::ostream &GMM::print(std::ostream &os) const
 	{
 		unsigned int k, i;
 		os << "GMM: nmix=" << nmix << "; vector_size=" << vector_size << endl;
-		for (k=0; k<nmix; ++k) {
+		for (k = 0; k < nmix; ++k)
+		{
 			os << "w[" << k << "]=\t" << w[k] << '\n';
 
 			os << "mu[" << k << "]=" << mu[k][0];
-			for (i=1; i<vector_size; ++i)
+			for (i = 1; i < vector_size; ++i)
 				os << "\t" << mu[k][i];
 			os << '\n';
 
-			os << "sig[" << k << "]=" << 1/inv_sigma[k][0];
-			for (i=1; i<vector_size; ++i)
-				os << "\t" << 1/inv_sigma[k][i];
-			os << '\n' << endl;
-
+			os << "sig[" << k << "]=" << 1 / inv_sigma[k][0];
+			for (i = 1; i < vector_size; ++i)
+				os << "\t" << 1 / inv_sigma[k][i];
+			os << '\n'
+			   << endl;
 		}
 		return os;
 	}

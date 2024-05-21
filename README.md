@@ -160,9 +160,9 @@ ejercicios indicados.
 
     De esta manera en lugar de ejecutar sobre la database entera, solo ejecutamos sobre las grabaciones de un locutor, en concreto el locutor **SES000**.
 
-    Ahora solo falta ejecutar el `make release` para actualizar los ejecutables, invocar a `run_spkid $FEAT` donde `$FEAT` puede coger uno de los siguientes 3 valores: `lp, lpcc o mfcc` y a partir de ahí tendremos un directorio que en nuestra configuración se llama `work/` donde dentro tendremos los ficheros de salida con los coeficientes calculados. Los ficheros con los coeficientes *lp* estaran en el directorio `work/lp/`, los coeficientes *lpcc* en el directorio `work/lpcc/` y así sucesivamente.
+    Ahora solo falta invocar a `run_spkid $FEAT` donde `$FEAT` puede coger uno de los siguientes 3 valores: `lp, lpcc o mfcc` y a partir de ahí tendremos un directorio que en nuestra configuración se llama `work/` donde dentro tendremos los ficheros de salida con los coeficientes solicitados. Los ficheros con los coeficientes *lp* estaran en el directorio `work/lp/`, los coeficientes *lpcc* en el directorio `work/lpcc/` y así sucesivamente.
 
-    Una vez tenemos los ficheros con los coeficientes computados (en este caso tendremos 15 ficheros .lp ya que nuestro locutor elegido tiene 15 ficheros de grabaciones de audio), hemos de usar el comando `fmatrix_show` dentro de un pipeline que nos extraerá concretamente los coeficientes número 4 y 5 (realmente estamos hablando del coeficiente quinto y sexto debido a que el indexado comienza en el 0) y estos valores los metemos dentro de un nuevo fichero llamado `lp_2_3.txt`. La dos letras iniciales es la parte que varia en función de si estamos trabajando con otro tipos de coeficientes. A continuación mostramos los pasos en código y el output que se debe ir siguiendo para hacer bien este proceso:
+    Una vez tenemos los ficheros con los coeficientes computados (en este caso tendremos 15 ficheros .lp ya que nuestro locutor elegido tiene 15 ficheros de grabaciones de audio), hemos de usar el comando `fmatrix_show` dentro de un pipeline que nos extraerá concretamente los coeficientes número 4 y 5 (realmente estamos hablando del coeficiente quinto y sexto debido a que el indexado comienza en el 0) y estos valores los metemos dentro de un nuevo fichero llamado `lp_2_3.txt` (para el caso de los coeficientes `lp`). La dos letras iniciales es la parte que varia en función de si estamos trabajando con otro tipos de coeficientes. A continuación mostramos los pasos en código y el output que se debe ir siguiendo para hacer bien este proceso:
 
     ```shell
     shumbabala@Gerards-MacBook-Air P4 % run_spkid lp
@@ -191,7 +191,7 @@ ejercicios indicados.
     egrep '^\[' | cut -f4,5 > lp_2_3.txt
     ```
 
-    El fichoero `lp_2_3.txt` tiene el siguiente aspecto (solo mostramos unas cuantas filas):
+    El fichero `lp_2_3.txt` tiene el siguiente aspecto (solo mostramos unas cuantas filas):
 
     ```shell
     1.7994	-1.33765

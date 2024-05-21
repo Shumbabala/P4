@@ -82,7 +82,7 @@ compute_lp() {
     shift
     for filename in $(sort $*); do
         mkdir -p `dirname $w/$FEAT/$filename.$FEAT`
-        EXEC="wav2lp 8 $db/$filename.wav $w/$FEAT/$filename.$FEAT"
+        EXEC="wav2lp 7 $db/$filename.wav $w/$FEAT/$filename.$FEAT" # computing 8 LP coefficients
         echo $EXEC && $EXEC || exit 1
     done
 }
@@ -92,7 +92,7 @@ compute_lpcc() {
     shift
     for filename in $(sort $*); do
         mkdir -p `dirname $w/$FEAT/$filename.$FEAT`
-        EXEC="wav2lpcc 8 10 $db/$filename.wav $w/$FEAT/$filename.$FEAT"
+        EXEC="wav2lpcc 8 9 $db/$filename.wav $w/$FEAT/$filename.$FEAT" # computing 10 LPC coefficients
         echo $EXEC && $EXEC || exit 1
     done
 }
@@ -102,7 +102,7 @@ compute_mfcc() {
     shift
     for filename in $(sort $*); do
         mkdir -p `dirname $w/$FEAT/$filename.$FEAT`
-        EXEC="wav2mfcc 10 25 $db/$filename.wav $w/$FEAT/$filename.$FEAT"
+        EXEC="wav2mfcc 10 25 $db/$filename.wav $w/$FEAT/$filename.$FEAT" # computing 10 MFC coefficients
         echo $EXEC && $EXEC || exit 1
     done
 }

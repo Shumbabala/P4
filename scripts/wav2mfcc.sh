@@ -45,7 +45,7 @@ fi
 mfcc_command="$MFCC -l 240 -s 8 -m $mfcc_order -n $mel_filter_bank_order"
 
 # Main command for feature extration
-sox $inputfile -t raw -e signed -b 16 - | $X2X +sf | tee >(frame_output=$( $FRAME -l 240 -p 80 ); echo "$frame_output" | $WINDOW -l 240 -L 240 |
+sox $inputfile -t raw -e signed -b 16 - | $X2X +sf | $FRAME -l 240 -p 80 | $WINDOW -l 240 -L 240 |
 	$mfcc_command > $base.mfcc || exit 1
    
 

@@ -17,6 +17,7 @@ set -o pipefail
 # - name_exp: name of the experiment
 # - db_devel: directory of the speecon database used during development
 # - db_test:  directory of the database used in the final test
+# \DONE change parameters as needed, ok for now
 lists=lists
 w=work
 name_exp=one
@@ -142,6 +143,7 @@ for cmd in $*; do
        ## @file
        # \TODO
        # Select (or change) good parameters for gmm_train
+       # \DONE
        for dir in $db_devel/BLOCK*/SES* ; do
            name=${dir/*\/}
            echo $name ----
@@ -182,7 +184,8 @@ for cmd in $*; do
        #   For instance:
        #   * <code> gmm_verify ... > $LOG_VERIF </code>
        #   * <code> gmm_verify ... | tee $LOG_VERIF </code>
-       echo "Implement the verify option ..."
+        EXEC="gmm_verify -d $w/$FEAT -e $FEAT -D $w/gmm/$FEAT -E gmm -w $world $lists/gmm.list $lists/verif/all.test $lists/verif/all.test.candidates"
+        echo $EXEC && $EXEC | tee $TEMP_VERIF || exit 1
 
    elif [[ $cmd == verifyerr ]]; then
        if [[ ! -s $LOG_VERIF ]] ; then
@@ -227,10 +230,10 @@ for cmd in $*; do
    # of a feature and a compute_$FEAT function exists.
    elif [[ "$(type -t compute_$cmd)" = function ]]; then
        FEAT=$cmd
-       #compute_$FEAT $db_devel $lists/class/all.train $lists/class/all.test
+       compute_$FEAT $db_devel $lists/class/all.train $lists/class/all.test
 
        #solo las señales de un locutor
-       compute_$FEAT $db_devel $lists/class/SES000.train # 15 wavs in total (so 15 output .lp files)
+       #compute_$FEAT $db_devel $lists/class/SES130.train # 15 wavs in total (so 15 output .lp files)
 
    else
        echo "undefined command $cmd" && exit 1

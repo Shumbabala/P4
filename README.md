@@ -162,7 +162,7 @@ ejercicios indicados.
 
     Ahora solo falta invocar a `run_spkid $FEAT` donde `$FEAT` puede coger uno de los siguientes 3 valores: `lp, lpcc o mfcc` y a partir de ahí tendremos un directorio que en nuestra configuración se llama `work/` donde dentro tendremos los ficheros de salida con los coeficientes solicitados. Los ficheros con los coeficientes *lp* estaran en el directorio `work/lp/`, los coeficientes *lpcc* en el directorio `work/lpcc/` y así sucesivamente.
 
-    Una vez tenemos los ficheros con los coeficientes computados (en este caso tendremos 15 ficheros .lp ya que nuestro locutor elegido tiene 15 ficheros de grabaciones de audio), hemos de usar el comando `fmatrix_show` dentro de un pipeline que nos extraerá concretamente los coeficientes número 4 y 5 (realmente estamos hablando del coeficiente quinto y sexto debido a que el indexado comienza en el 0) y estos valores los metemos dentro de un nuevo fichero llamado `lp_2_3.txt` (para el caso de los coeficientes `lp`). La dos letras iniciales es la parte que varia en función de si estamos trabajando con otro tipos de coeficientes. A continuación mostramos los pasos en código y el output que se debe ir siguiendo para hacer bien este proceso:
+    Una vez tenemos los ficheros con los coeficientes computados (en este caso tendremos 15 ficheros .lp ya que nuestro locutor elegido tiene 15 ficheros de grabaciones de audio), hemos de usar el comando `fmatrix_show` dentro de un pipeline que nos extraerá concretamente los coeficientes número 4 y 5 y estos valores los metemos dentro de un nuevo fichero llamado `lp_2_3.txt` (para el caso de los coeficientes `lp`). La dos letras iniciales es la parte que varia en función del tipo de coeficiente con el que trabajamos. A continuación mostramos los pasos en código y el output que se debe ir siguiendo para hacer bien este proceso:
 
     ```shell
     shumbabala@Gerards-MacBook-Air P4 % run_spkid lp
@@ -207,27 +207,128 @@ ejercicios indicados.
  
   + ¿Cuál de ellas le parece que contiene más información?
 
+  Lo que parece sí estar claro es que los LPC contienen la menor cantidad de entropía (usamos entropía para indicar la cantidad de desorden o de información esencial que nos proporciona una fuente), en contraste con los demás tipos de coeficients que parecen estar mucho más incorrelados, y parece ser bastante difícil poder interpretar cuál de los 2 proporciona más información (ambos parecen estar igualmente de esparcidos). A continuación mostramos las gráficas de los pares de coeficientes (#2 y #3) para los 3 tipos de coeficientes (LPC, LPCC y MFCC), realizado mediante el script `Python`:
+
+  ![gráficas tipo 'scatter' de los coeficientes #2 y #3 de los 3 tipos de coefs](img/coefficient_graphs.png)
+
 - Usando el programa <code>pearson</code>, obtenga los coeficientes de correlación normalizada entre los
   parámetros 2 y 3 para un locutor, y rellene la tabla siguiente con los valores obtenidos.
 
   |                        | LP   | LPCC | MFCC |
   |------------------------|:----:|:----:|:----:|
-  | &rho;<sub>x</sub>[2,3] |      |      |      |
+  | &rho;<sub>x</sub>[2,3] |-0.83 | 0.22 | -0.18|
   
   + Compare los resultados de <code>pearson</code> con los obtenidos gráficamente.
+
+  A continuación mostramos las 3 distintas ejecuciones del programa <code>pearson</code> (una para cada tipo de coeficiente), el resultado de dicha ejecución (el coeficiente de Pearson) y nuestros comentarios al respecto:
+
+  * *LPC*
+
+  ```shell
+  shumbabala@Gerards-MacBook-Air p4 % pearson work/lp/BLOCK00/SES000/* | grep "rho\[2\]\[3\]"
+  -0.830677	rho[2][3]
+  ```
+
+  Como era de esperar, la correlación es negativa. El gráfico azul del apartado anterior demuestra visualmente que la relación entre dichos LPC es fácilmente predecible (coef. Pearson (&rho;<sub>x</sub>) cerca de 1, en valor absoluto) y con tendencia negativa (a medida que el LPC #2 aumenta, el LPC #3 disminuye (o al revés)).
+
+  * *LPCC*
+
+  ```shell
+  shumbabala@Gerards-MacBook-Air p4 % pearson work/lpcc/BLOCK00/SES000/* | grep "rho\[2\]\[3\]"        
+  0.220719	rho[2][3]
+  ```
+
+  Ha dado un valor que también era de esperar, ya que el gráfico verde del apartado anterior demostraba una relación de poca predicción (alta entropía) y eso dió lugar a un valor de &rho;<sub>x</sub> mucho más bajo (cerca de 0). También destacar que dió positivo, cosa que también puede entenderse ya que la aglomeración de datos en el gráfico verde parece tener tendencia a subir (a medida que el coeficiente #2 aumento, también le sigue el #3).
+
+  * *MFCC*
+
+  ```shell
+  shumbabala@Gerards-MacBook-Air p4 % pearson work/mfcc/BLOCK00/SES000/* | grep "rho\[2\]\[3\]"
+  -0.181414	rho[2][3]
+  ```
+
+  Esta vez el &rho;<sub>x</sub> ha dado incluso más cerca del zero (por lo tanto confirmamos que los coeficientes `Mel` son los que aportan más información, almenos mediante des del punto de vista estrictamente estadístico y de Pearson) y dió signo negativo, cosa que también pudo suponerse a través de la gráfica roja del apartado anterior. Lo que no havia quedado claro es cual de los dos (si los `LPCC` o los `MFCC`) aportaban mayor información pero ahora podemos confirmar que son los `MFCC` los "ganadores".
   
 - Según la teoría, ¿qué parámetros considera adecuados para el cálculo de los coeficientes LPCC y MFCC?
+
+* *LPCC*
+
+Para generarlos debemos proporcionar al programa `SPTK` (1) orden de los LPC y (2) orden de los LPCC. En las fórmulas de computacíon de los LPCC, hay un comportamiento altamente recursivo, donde los LPCC posteriores dependen altamente de los LPC y LPCC anteriores.
+
+* *MFCC*
+
+Usando el mismom procedimiento que antes, para generarlos debemos proporcionar al programa `SPTK` varios argumentos, pero en nuestro caso los parámetros más importantes son el **tipo de ventana usada**, el **orden de los MFCC** (la cantidad de coeficientes) y el **orden del banco de filtros Mel**.
 
 ### Entrenamiento y visualización de los GMM.
 
 Complete el código necesario para entrenar modelos GMM.
 
++ Para entrenar dichos modelos, se ha tenido que completar los métodos `GMM:logprob()` y `GMM::em()` del fichero de la clase base *gmm.cpp* y luego adaptarlos dentro del programa de entrenamiento *gmm_train.cpp* mediante la completación de la inicialización aleatoria del modelo + la invocación al método *EM* de la clase *GMM* tras inicializarla mediante dicho método aleatorio (en el futuro puede que cambíe).
+
 - Inserte una gráfica que muestre la función de densidad de probabilidad modelada por el GMM de un locutor
   para sus dos primeros coeficientes de MFCC.
 
+  Vamos a insertar el gráfico salida del programa `plot_gmm_feat` para la visualización de las *fdp* para los coeficientes 1 y 2 MFCC del locutor **SES000**. El fichero SES000.gmm fue generado con las opciones default, es decir (solo las más importantes):
+
+  * **-m = 5 (nombre de mixtures)**
+  * **-N = 20 (nombre de iteraciones máximas)**
+  * **-T = 1e-3 (umbral mínimo de incremento de entropía)**
+
+  La invocación el programa `plot_gmm_feat` fue realizado de la siguiente forma:
+
+  ```shell
+  (venv) shumbabala@10-192-110-8client P4 % plot_gmm_feat work/gmm/mfcc/SES000.gmm work/mfcc/BLOCK00/SES000/*.mfcc
+  ```
+
+  (No hemos usado las opciones `-x` y `-y` ya que por defecto equivalen a los coeficientes #0 y #1, y ya están así dispuestos los coeficientes en los ficheros mfcc).
+
+  Que dió lugar al siguiente gráfico:
+
+  ![visualización fdp con umbrales del 50% y 90% probabilidad del primer + segundo coeficiente MFCC del locutor SES000](img/SES000_MFCC_GMM.png)
+  
 - Inserte una gráfica que permita comparar los modelos y poblaciones de dos locutores distintos (la gŕafica
   de la página 20 del enunciado puede servirle de referencia del resultado deseado). Analice la capacidad
   del modelado GMM para diferenciar las señales de uno y otro.
+
+  Para la realización de todas estas gráficas se ha ampliado el script `Python` del programa **plot_gmm_feat.py**. Puede consultar el código para ver dicha ampliación.
+
+  Esta ampliación ahora permite ejecutar dicho programa de 2 formas distintas, la primera siendo la forma normal de antes de la ampliación, pero la segunda permitiendo pasar por línia de comandos los 2 colores con los que queremos graficar los dos modelos GMM (por ejemplo: `-g "red blue"`), también pudiendo pasar los ficheros `.gmm` y finalmente pasar las 2 databases conteniendo los ficheros que contienen los coeficientes a graficar encima de los GMM.
+
+  Hemos realizado la comparación para los locutores **SES000** y **SES20**, simplemente para garantizar que la presentación sea única (altamente improbable que alguien haya elegido la comparación entre dicho par de locutores).
+
+  A continuación mostramos las ejecuciónes de este programa junto con los gráficos obtenidos:
+
+  **LP**
+
+  ```shell
+  plot_gmm_feat -g "red blue" -x 1 -y 2 -g "red blue" work/gmm/lp/SES000.gmm work/gmm/lp/SES020.gmm work/lp/BLOCK00/SES000/*.lp work/lp/BLOCK02/SES020/*.lp
+  ```
+
+  * Hemos usado las opciones de `-x 1 -y 2` porque el primer coeficiente LP representa la potencia total del señal y representarlo distorsionaria demasiado el gráfico final.
+
+  ![subplots de los GMM y coeficientes LP para los locutores SES000 y SES020](img/subplots_lp.png)
+
+  Analizando los gráficos, es claro que el GMM para un locutor no consigue representar fidelmente la distribución de los LP del otro locutor. Se puede observar, por ejemplo, como el GMM del SES020 no consigue captar una gran concentración de coeficientes LP del SES000 situados en la cola superior izquierda de la distribución. 
+
+  **LPCC**
+
+  ```shell
+  plot_gmm_feat -g "red blue" work/gmm/lpcc/SES000.gmm work/gmm/lpcc/SES020.gmm work/lpcc/BLOCK00/SES000/*.lpcc work/lpcc/BLOCK02/SES020/*.lpcc
+  ```
+
+  ![subplots de los GMM y coeficientes LPCC para los locutores SES000 y SES020](img/subplots_lpcc.png)
+
+  En cuanto los LPCC, vemos que los GMM de los distintos locutores parecen tener mejor adaptación con las distribuciones de los demás locutores, almenos en comparación con los resultados obtenidos mediante el análisis LP. Podemos ver como, por ejemplo, el GMM del SES000 tampoco consigue adaptarse de las mejores maneras posibles a la distrubción LPCC del SES020, ya que parece que este locutor tiene una distribucion más esparcida/distribuida y más difícil de predecir, a diferencia de la del SES000 que es más compacta y ocupa "menos espacio" en el plano de la gráfica.
+
+  **MFCC**
+
+  ```shell
+  plot_gmm_feat -g "red blue" work/gmm/mfcc/SES000.gmm work/gmm/mfcc/SES020.gmm work/mfcc/BLOCK00/SES000/*.mfcc work/mfcc/BLOCK02/SES020/*.mfcc
+  ```
+
+  ![subplots de los GMM y coeficientes MFCC para los locutores SES000 y SES020](img/subplots_mfcc.png)
+
+  En cuanto a los MFCC volvemos a tener una situación relativamente parecida a la de los LPCC. Para extraer mejores conclusiones sobre las capacidades de reconocimiento/verificación del locutor se tendrá que utilizar programas de análisis más potentes, ya que con estos gráficos el tema tampoco queda de lo más claro que podría quedar.
 
 ### Reconocimiento del locutor.
 
@@ -235,6 +336,29 @@ Complete el código necesario para realizar reconociminto del locutor y optimice
 
 - Inserte una tabla con la tasa de error obtenida en el reconocimiento de los locutores de la base de datos
   SPEECON usando su mejor sistema de reconocimiento para los parámetros LP, LPCC y MFCC.
+
+  * `LPC`:
+
+  ```shell
+  nerr=541	ntot=785	error_rate=68.92%
+  ```
+  * `LPCC`:
+
+  ```shell
+  nerr=365	ntot=785	error_rate=46.50%
+  ```
+
+  * `MFCC`:
+
+  ```shell
+  nerr=250	ntot=785	error_rate=31.85%
+  ```
+
+  |                        | LP   | LPCC | MFCC |
+  |------------------------|:----:|:----:|:----:|
+  | **Tasa De Error** |68.92%| 46.50% | 31.85%|
+
+  Es cierto que los resultados son relativamente pobres, cosa que puede fácilmente explicarse por dos hechos: (1) La generación de los coeficientes (ya sean LP, LPCC o MFCC) podría haberse realizado de forma más robusta y eficaz, es decir, usar más coeficientes (por ejemplo de MFCC se computaron 10) y (2) la etapa de entrenamiento de los GMM también podría haberse realizado con más intensidad, entrenar más gaussianas, con más iteraciones o cualquier combinación de parámetros que podría considerarse.
 
 ### Verificación del locutor.
 

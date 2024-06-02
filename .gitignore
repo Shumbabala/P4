@@ -10,5 +10,6 @@ __MAC*
 *DS_Store
 *Zone.Identifier
 *bak
+venv/
 
 !src/gmm

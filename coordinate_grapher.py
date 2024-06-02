@@ -10,8 +10,8 @@ plot_titles = ["Linear Prediction Coefficients",
                "Mel Frequency Cepstrum Coefficients"]
 
 # Define x and y axis labels
-x_label = "Coefficient #4"
-y_label = "Coefficient #5"
+x_label = "Coefficient #2"
+y_label = "Coefficient #3"
 
 # Define colors for scatter plots
 colors = ['blue', 'green', 'red']
